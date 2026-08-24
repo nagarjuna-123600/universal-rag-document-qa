@@ -5,10 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 groq_key = os.getenv("GROQ_API_KEY", "")
 if not groq_key:
-    try:
-        groq_key = st.secrets["GROQ_API_KEY"]
-    except Exception:
-        groq_key = ""
+        groq_key = st.secrets.get("GROQ_API_KEY","")
 @dataclass(frozen=True)
 class Settings:
     groq_api_key: str = groq_key
