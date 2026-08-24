@@ -15,5 +15,6 @@ python-pptx>=1.0
 pymupdf>=1.25
 rapidocr
 onnxruntime
+opencv-python-headless
 Pillow>=11
 lxml>=5
