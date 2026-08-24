@@ -1,10 +1,17 @@
 import os
+import streamlit as st
 from dataclasses import dataclass
 from dotenv import load_dotenv
 load_dotenv()
+groq_key = os.getenv("GROQ_API_KEY", "")
+if not groq_key:
+    try:
+        groq_key = st.secrets["GROQ_API_KEY"]
+    except Exception:
+        groq_key = ""
 @dataclass(frozen=True)
 class Settings:
-    groq_api_key: str = os.getenv('GROQ_API_KEY', '')
+    groq_api_key: str = groq_key
     llm_model: str = os.getenv('LLM_MODEL', 'llama-3.3-70b-versatile')
     embedding_model: str = os.getenv('EMBEDDING_MODEL', 'BAAI/bge-m3')
     chunk_size: int = int(os.getenv('CHUNK_SIZE', '900'))
