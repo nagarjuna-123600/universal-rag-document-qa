@@ -548,23 +548,25 @@ def extract_document(
 
         return extract_image(data)
 
-  if ext == ".doc":
-    raise ValueError(
-        "This is an older Microsoft Word (.doc) file. "
-        "Please save it as .docx and upload the .docx file."
-    )
+    if ext == ".doc":
+        raise ValueError(
+            "This is an older Microsoft Word (.doc) file. "
+            "Please save it as .docx and upload the .docx file."
+        )
 
-if ext == ".xls":
-    raise ValueError(
-        "This is an older Microsoft Excel (.xls) file. "
-        "Please save it as .xlsx and upload the .xlsx file."
-    )
+    if ext == ".xls":
+        raise ValueError(
+            "This is an older Microsoft Excel (.xls) file. "
+            "Please save it as .xlsx and upload the .xlsx file."
+        )
 
-if ext == ".ppt":
-    raise ValueError(
-        "This is an older Microsoft PowerPoint (.ppt) file. "
-        "Please save it as .pptx and upload the .pptx file."
-    )
+    if ext == ".ppt":
+        raise ValueError(
+            "This is an older Microsoft PowerPoint (.ppt) file. "
+            "Please save it as .pptx and upload the .pptx file."
+        )
+
+    raise ValueError(f"Unsupported file type: {ext}")
 
 # --------------------------------------------------
 # CONVERT TO LANGCHAIN DOCUMENTS
