@@ -27,7 +27,7 @@ class Settings:
     groq_api_key: str = groq_key
     llm_model: str = os.getenv(
         'LLM_MODEL',
-        'llama-3.3-70b-versatile'
+        'openai/gpt-oss-20b'
     )
     embedding_model: str = os.getenv(
         'EMBEDDING_MODEL',
