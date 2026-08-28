@@ -13,10 +13,9 @@ openpyxl>=3.1
 python-docx>=1.1
 python-pptx>=1.0
 pymupdf>=1.25
-rapidocr
-onnxruntime
+rapidocr-onnxruntime==1.4.4
 torch==2.12.1
 torchvision==0.27.1
-opencv-python-headless
+opencv-python-headless==4.12.0.88
 Pillow>=11
 lxml>=5
