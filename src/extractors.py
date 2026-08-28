@@ -6,7 +6,6 @@ from typing import Iterable
 
 import pandas as pd
 from PIL import Image
-from rapidocr import RapidOCR
 from langchain_core.documents import Document
 
 from .models import ParsedUnit
@@ -16,7 +15,35 @@ from .models import ParsedUnit
 # OCR ENGINE
 # ============================================================
 
-ocr_engine = RapidOCR()
+# Do NOT initialize RapidOCR when the application starts.
+# It will be initialized only when OCR is actually required.
+ocr_engine = None
+
+
+def get_ocr_engine():
+    """
+    Create the RapidOCR engine only when OCR is needed.
+    This prevents Streamlit Cloud from failing during
+    application startup if there is an OCR dependency issue.
+    """
+
+    global ocr_engine
+
+    if ocr_engine is None:
+
+        try:
+            from rapidocr import RapidOCR
+
+            ocr_engine = RapidOCR()
+
+        except Exception as exc:
+
+            raise RuntimeError(
+                f"OCR initialization failed: "
+                f"{type(exc).__name__}: {exc}"
+            ) from exc
+
+    return ocr_engine
 
 
 # ============================================================
@@ -24,9 +51,21 @@ ocr_engine = RapidOCR()
 # ============================================================
 
 def clean_text(text: str) -> str:
+
     text = text.replace("\x00", " ")
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
+
+    text = re.sub(
+        r"[ \t]+",
+        " ",
+        text
+    )
+
+    text = re.sub(
+        r"\n{3,}",
+        "\n\n",
+        text
+    )
+
     return text.strip()
 
 
@@ -34,7 +73,10 @@ def clean_text(text: str) -> str:
 # CREATE PARSED UNIT
 # ============================================================
 
-def _doc(text: str, **metadata) -> ParsedUnit | None:
+def _doc(
+    text: str,
+    **metadata
+) -> ParsedUnit | None:
 
     text = clean_text(text)
 
@@ -66,8 +108,10 @@ def extract_pdf(
     ) as pdf:
 
         if pdf.is_encrypted:
+
             raise ValueError(
-                "Encrypted/password-protected PDFs are not supported."
+                "Encrypted/password-protected PDFs "
+                "are not supported."
             )
 
         for page_no, page in enumerate(
@@ -75,7 +119,10 @@ def extract_pdf(
             start=1
         ):
 
+            # ------------------------------------------------
             # First try normal PDF text extraction
+            # ------------------------------------------------
+
             text = page.get_text("text")
 
             if clean_text(text):
@@ -89,10 +136,12 @@ def extract_pdf(
                 if unit:
                     units.append(unit)
 
+            # ------------------------------------------------
+            # If no text -> OCR
+            # ------------------------------------------------
+
             else:
 
-                # If PDF has no selectable text,
-                # perform OCR
                 pix = page.get_pixmap(
                     matrix=fitz.Matrix(
                         1.8,
@@ -107,11 +156,23 @@ def extract_pdf(
                     )
                 )
 
-                result = ocr_engine(img)
+                # Initialize OCR only when required
+                try:
+
+                    result = get_ocr_engine()(img)
+
+                except Exception as exc:
+
+                    raise RuntimeError(
+                        f"PDF OCR failed on page "
+                        f"{page_no}: "
+                        f"{type(exc).__name__}: {exc}"
+                    ) from exc
 
                 ocr_text = ""
 
                 if result and result.txts:
+
                     ocr_text = "\n".join(
                         result.txts
                     )
@@ -146,7 +207,10 @@ def extract_docx(
 
     units = []
 
+    # --------------------------------------------------------
     # Paragraphs
+    # --------------------------------------------------------
+
     for i, paragraph in enumerate(
         d.paragraphs,
         start=1
@@ -163,7 +227,10 @@ def extract_docx(
             if unit:
                 units.append(unit)
 
+    # --------------------------------------------------------
     # Tables
+    # --------------------------------------------------------
+
     for table_index, table in enumerate(
         d.tables,
         start=1
@@ -398,7 +465,10 @@ def extract_image(
     data: bytes
 ) -> list[ParsedUnit]:
 
+    # --------------------------------------------------------
     # Validate image
+    # --------------------------------------------------------
+
     try:
 
         img = Image.open(
@@ -413,15 +483,33 @@ def extract_image(
             f"Invalid or corrupted image: {exc}"
         )
 
+    # --------------------------------------------------------
     # Re-open after verify()
+    # --------------------------------------------------------
+
     img = Image.open(
         io.BytesIO(data)
     )
 
+    # --------------------------------------------------------
     # Run OCR
-    result = ocr_engine(img)
+    # --------------------------------------------------------
 
-    # Safely get OCR text
+    try:
+
+        result = get_ocr_engine()(img)
+
+    except Exception as exc:
+
+        raise RuntimeError(
+            f"Image OCR failed: "
+            f"{type(exc).__name__}: {exc}"
+        ) from exc
+
+    # --------------------------------------------------------
+    # Extract OCR text
+    # --------------------------------------------------------
+
     text = ""
 
     if result and result.txts:
@@ -432,13 +520,19 @@ def extract_image(
 
     text = clean_text(text)
 
-    # IMPORTANT:
-    # Never return [None]
+    # --------------------------------------------------------
+    # No text found
+    # --------------------------------------------------------
+
     if not text:
 
         raise ValueError(
             "No readable text was found in the image."
         )
+
+    # --------------------------------------------------------
+    # Create parsed unit
+    # --------------------------------------------------------
 
     unit = ParsedUnit(
         text=text,
@@ -464,6 +558,10 @@ def extract_document(
         name
     ).suffix.lower()
 
+    # --------------------------------------------------------
+    # PDF
+    # --------------------------------------------------------
+
     if ext == ".pdf":
 
         return extract_pdf(
@@ -471,17 +569,29 @@ def extract_document(
             name
         )
 
+    # --------------------------------------------------------
+    # DOCX
+    # --------------------------------------------------------
+
     if ext == ".docx":
 
         return extract_docx(
             data
         )
 
+    # --------------------------------------------------------
+    # CSV
+    # --------------------------------------------------------
+
     if ext == ".csv":
 
         return extract_csv(
             data
         )
+
+    # --------------------------------------------------------
+    # XLSX
+    # --------------------------------------------------------
 
     if ext == ".xlsx":
 
@@ -490,11 +600,19 @@ def extract_document(
             name
         )
 
+    # --------------------------------------------------------
+    # PPTX
+    # --------------------------------------------------------
+
     if ext == ".pptx":
 
         return extract_pptx(
             data
         )
+
+    # --------------------------------------------------------
+    # JSON
+    # --------------------------------------------------------
 
     if ext == ".json":
 
@@ -502,11 +620,19 @@ def extract_document(
             data
         )
 
+    # --------------------------------------------------------
+    # XML
+    # --------------------------------------------------------
+
     if ext == ".xml":
 
         return extract_xml(
             data
         )
+
+    # --------------------------------------------------------
+    # TXT
+    # --------------------------------------------------------
 
     if ext == ".txt":
 
@@ -514,6 +640,10 @@ def extract_document(
             data,
             name
         )
+
+    # --------------------------------------------------------
+    # IMAGE
+    # --------------------------------------------------------
 
     if ext in {
         ".jpg",
@@ -528,6 +658,10 @@ def extract_document(
             data
         )
 
+    # --------------------------------------------------------
+    # Legacy formats
+    # --------------------------------------------------------
+
     if ext in {
         ".doc",
         ".xls",
@@ -539,6 +673,10 @@ def extract_document(
             "LibreOffice/antiword conversion "
             "and are not enabled in this safe baseline."
         )
+
+    # --------------------------------------------------------
+    # Unsupported
+    # --------------------------------------------------------
 
     raise ValueError(
         f"No extractor configured for {ext}."
