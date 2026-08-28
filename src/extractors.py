@@ -15,16 +15,18 @@ from .models import ParsedUnit
 # OCR ENGINE
 # ============================================================
 
-# Do NOT initialize RapidOCR when the application starts.
-# It will be initialized only when OCR is actually required.
+# Do NOT initialize OCR when Streamlit starts.
+# OCR will be initialized only when an image or scanned PDF
+# actually requires OCR.
 ocr_engine = None
 
 
 def get_ocr_engine():
     """
-    Create the RapidOCR engine only when OCR is needed.
-    This prevents Streamlit Cloud from failing during
-    application startup if there is an OCR dependency issue.
+    Initialize RapidOCR only when OCR is required.
+
+    This prevents OCR dependencies from being initialized
+    during normal application startup.
     """
 
     global ocr_engine
@@ -32,7 +34,8 @@ def get_ocr_engine():
     if ocr_engine is None:
 
         try:
-            from rapidocr_onnxruntime import RapidOCR
+            # NEW RapidOCR package
+            from rapidocr import RapidOCR
 
             ocr_engine = RapidOCR()
 
@@ -52,14 +55,20 @@ def get_ocr_engine():
 
 def clean_text(text: str) -> str:
 
+    if not text:
+        return ""
+
+    # Remove NULL characters
     text = text.replace("\x00", " ")
 
+    # Normalize spaces
     text = re.sub(
         r"[ \t]+",
         " ",
         text
     )
 
+    # Normalize excessive new lines
     text = re.sub(
         r"\n{3,}",
         "\n\n",
@@ -137,7 +146,8 @@ def extract_pdf(
                     units.append(unit)
 
             # ------------------------------------------------
-            # If no text -> OCR
+            # If PDF contains no selectable text,
+            # use OCR
             # ------------------------------------------------
 
             else:
@@ -156,7 +166,6 @@ def extract_pdf(
                     )
                 )
 
-                # Initialize OCR only when required
                 try:
 
                     result = get_ocr_engine()(img)
@@ -171,11 +180,22 @@ def extract_pdf(
 
                 ocr_text = ""
 
-                if result and result.txts:
+                # RapidOCR result contains txts
+                if result is not None:
 
-                    ocr_text = "\n".join(
-                        result.txts
+                    txts = getattr(
+                        result,
+                        "txts",
+                        None
                     )
+
+                    if txts:
+
+                        ocr_text = "\n".join(
+                            str(text)
+                            for text in txts
+                            if text
+                        )
 
                 if clean_text(ocr_text):
 
@@ -481,15 +501,20 @@ def extract_image(
 
         raise ValueError(
             f"Invalid or corrupted image: {exc}"
-        )
+        ) from exc
 
     # --------------------------------------------------------
-    # Re-open after verify()
+    # Re-open image after verify()
     # --------------------------------------------------------
 
     img = Image.open(
         io.BytesIO(data)
     )
+
+    # Convert to RGB for OCR
+    if img.mode not in ("RGB", "L"):
+
+        img = img.convert("RGB")
 
     # --------------------------------------------------------
     # Run OCR
@@ -512,11 +537,21 @@ def extract_image(
 
     text = ""
 
-    if result and result.txts:
+    if result is not None:
 
-        text = "\n".join(
-            result.txts
+        txts = getattr(
+            result,
+            "txts",
+            None
         )
+
+        if txts:
+
+            text = "\n".join(
+                str(value)
+                for value in txts
+                if value
+            )
 
     text = clean_text(text)
 
