@@ -32,7 +32,7 @@ def get_ocr_engine():
     if ocr_engine is None:
 
         try:
-            from rapidocr import RapidOCR
+            from rapidocr_onnxruntime import RapidOCR
 
             ocr_engine = RapidOCR()
 
