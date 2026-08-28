@@ -548,23 +548,23 @@ def extract_document(
 
         return extract_image(data)
 
-    if ext in {
-        ".doc",
-        ".xls",
-        ".ppt"
-    }:
-
-        raise ValueError(
-            f"Legacy {ext} files require "
-            "LibreOffice/antiword conversion "
-            "and are not enabled in this "
-            "safe baseline."
-        )
-
+  if ext == ".doc":
     raise ValueError(
-        f"No extractor configured for {ext}."
+        "This is an older Microsoft Word (.doc) file. "
+        "Please save it as .docx and upload the .docx file."
     )
 
+if ext == ".xls":
+    raise ValueError(
+        "This is an older Microsoft Excel (.xls) file. "
+        "Please save it as .xlsx and upload the .xlsx file."
+    )
+
+if ext == ".ppt":
+    raise ValueError(
+        "This is an older Microsoft PowerPoint (.ppt) file. "
+        "Please save it as .pptx and upload the .pptx file."
+    )
 
 # --------------------------------------------------
 # CONVERT TO LANGCHAIN DOCUMENTS
