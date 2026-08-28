@@ -15,8 +15,8 @@ python-pptx>=1.0
 pymupdf>=1.25
 rapidocr
 onnxruntime
-torch
-torchvision
+torch==2.12.1
+torchvision==0.27.1
 opencv-python-headless
 Pillow>=11
 lxml>=5
