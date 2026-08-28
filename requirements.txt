@@ -1,5 +1,4 @@
 streamlit>=1.50,<2
-python-dotenv>=1.0
 langchain>=1.0,<2
 langchain-core>=1.0,<2
 langchain-community>=0.4,<1
