@@ -11,8 +11,8 @@ langchain-groq>=1.0,<2
 faiss-cpu>=1.10
 sentence-transformers>=3.4
 
-torch==2.6.0
-torchvision==0.21.0
+torch==2.8.0
+torchvision==0.23.0
 
 pandas>=2.2
 openpyxl>=3.1
