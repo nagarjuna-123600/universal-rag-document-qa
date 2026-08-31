@@ -62,6 +62,7 @@ class UniversalRAG:
         # Store every uploaded file
         self.files: dict[str, FileIndex] = {}
 
+
     # ==================================================
     # ADD FILE
     # ==================================================
@@ -109,6 +110,7 @@ class UniversalRAG:
             chunks=len(chunks)
         )
 
+
     # ==================================================
     # RETRIEVE
     # ==================================================
@@ -123,6 +125,7 @@ class UniversalRAG:
         # Search every uploaded file
         for file_id, index in self.files.items():
 
+            # IMPORTANT:
             # Retrieve only ONE best chunk from each file
             results = (
                 index.vectorstore
@@ -144,9 +147,11 @@ class UniversalRAG:
             key=lambda x: x[1]
         )
 
+        # IMPORTANT:
         # From all uploaded files, return ONLY
         # the single best matching chunk.
         return candidates[:1]
+
 
     # ==================================================
     # ANSWER
@@ -242,6 +247,7 @@ Text:
                     extra=metadata,
                 )
             )
+
 
         # ==================================================
         # PROMPT
